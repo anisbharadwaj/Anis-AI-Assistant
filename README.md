@@ -1,24 +1,22 @@
-# Anis-AI-Assistant
+Updated Phase 1: AI backend, mock speech modules, local provider stub, and SQLite memory.
 
-This repository contains a working scaffold for the ANIS AI Windows assistant.
+Files added/changed:
+- ai/local_provider.py (new)
+- ai/online_provider.py (new)
+- ai/__init__.py (new)
+- speech/microphone.py (new)
+- speech/speech_to_text.py (new)
+- speech/text_to_speech.py (new)
+- speech/language_detection.py (new)
+- memory/database.py (new)
+- tests/test_provider.py (new)
+- tests/test_speech.py (new)
+- .env.example (updated)
 
-What's implemented so far (Phase 1/2 continuation):
-- Typed chat UI using PySide6
-- Assistant core with a provider abstraction and a MockProvider for offline/testing
-- Registered action system with two actions: open_application and open_website
-- Permission checks that require confirmation for medium/high risk actions
-- Simple PowerShell setup script and test skeleton
-
-How to run (Windows PowerShell):
-1. Create and activate a virtual environment
-   > python -m venv .venv
+Run tests:
+1) Activate virtualenv
    > .\\.venv\\Scripts\\Activate.ps1
-2. Install dependencies
-   > python -m pip install --upgrade pip
+2) Install deps
    > python -m pip install -r requirements.txt
-3. Run the app
-   > python app.py
-
-Notes and next steps:
-- Speech (STT/TTS), multilingual detection, wake-word, YouTube automation, and verified subscription flows are NOT yet implemented and will be added incrementally.
-- The MockProvider interprets simple "open <app>" and URL commands and can be replaced with a real provider via the AI_PROVIDER env var.
+3) Run pytest
+   > python -m pytest -q
