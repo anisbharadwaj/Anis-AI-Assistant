@@ -1,6 +1,3 @@
-"""Action registry: register actions, validate arguments, and execute them.
-This module implements the registered-action system required by the project.
-"""
 from dataclasses import dataclass
 from typing import Callable, Dict, Any, Optional
 import subprocess
@@ -8,6 +5,8 @@ import os
 import shlex
 
 from security.permissions import requires_confirmation
+from automation import applications, files, windows_system
+from security.audit_log import log_action
 
 
 @dataclass
@@ -58,52 +57,18 @@ def execute_action(action_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
 
     # execute handler
     try:
-        result = action.handler(args)
-        return {"success": True, "action": action_id, "summary": result.get("summary", "(no summary)")}
+        result = action.handler(**args)
+        # log audit
+        try:
+            log_action(action_id, str(args), success=bool(result.get("success")))
+        except Exception:
+            pass
+        return result
     except Exception as e:
         return {"success": False, "action": action_id, "error": str(e)}
 
 
-# Handlers
-
-def _open_application_handler(args: Dict[str, Any]) -> Dict[str, Any]:
-    name = args.get("name")
-    # map friendly names to common Windows executables
-    mapping = {
-        "notepad": "notepad.exe",
-        "calculator": "calc.exe",
-        "calc": "calc.exe",
-        "file explorer": "explorer.exe",
-        "explorer": "explorer.exe",
-        "edge": "msedge",
-        "chrome": "chrome",
-        "firefox": "firefox",
-        "vscode": "code",
-        "code": "code",
-    }
-    cmd = mapping.get(name.lower(), name)
-    try:
-        # Try os.startfile first for simple names/paths/URLs
-        if os.path.exists(cmd) or cmd.lower().endswith(".exe"):
-            subprocess.Popen([cmd])
-        else:
-            # attempt to start by name - relies on PATH or shell
-            subprocess.Popen(cmd, shell=True)
-        return {"summary": f"Launched {name}"}
-    except Exception as e:
-        raise
-
-
-def _open_website_handler(args: Dict[str, Any]) -> Dict[str, Any]:
-    url = args.get("url")
-    try:
-        os.startfile(url)
-        return {"summary": f"Opened website {url}"}
-    except Exception as e:
-        raise
-
-
-# Register default actions
+# Register default actions that use automation modules
 register_action(
     Action(
         id="open_application",
@@ -111,7 +76,7 @@ register_action(
         args_schema={"name": str},
         permission_level="low",
         timeout=10,
-        handler=_open_application_handler,
+        handler=applications.open_application,
     )
 )
 
@@ -122,6 +87,116 @@ register_action(
         args_schema={"url": str},
         permission_level="low",
         timeout=10,
-        handler=_open_website_handler,
+        handler=applications.open_website,
+    )
+)
+
+register_action(
+    Action(
+        id="list_directory",
+        description="List files in a directory",
+        args_schema={"path": str},
+        permission_level="low",
+        timeout=10,
+        handler=files.list_directory,
+    )
+)
+
+register_action(
+    Action(
+        id="search_file",
+        description="Search for files by pattern",
+        args_schema={"start_dir": str, "pattern": str},
+        permission_level="low",
+        timeout=30,
+        handler=files.search_file,
+    )
+)
+
+register_action(
+    Action(
+        id="create_folder",
+        description="Create a folder",
+        args_schema={"path": str},
+        permission_level="medium",
+        timeout=10,
+        handler=files.create_folder,
+    )
+)
+
+register_action(
+    Action(
+        id="create_text_file",
+        description="Create a text file",
+        args_schema={"path": str, "content": str},
+        permission_level="medium",
+        timeout=10,
+        handler=files.create_text_file,
+    )
+)
+
+register_action(
+    Action(
+        id="read_text_file",
+        description="Read a text file",
+        args_schema={"path": str},
+        permission_level="low",
+        timeout=10,
+        handler=files.read_text_file,
+    )
+)
+
+register_action(
+    Action(
+        id="rename_file",
+        description="Rename a file",
+        args_schema={"src": str, "dest": str},
+        permission_level="medium",
+        timeout=20,
+        handler=files.rename_file,
+    )
+)
+
+register_action(
+    Action(
+        id="copy_file",
+        description="Copy a file",
+        args_schema={"src": str, "dest": str},
+        permission_level="medium",
+        timeout=30,
+        handler=files.copy_file,
+    )
+)
+
+register_action(
+    Action(
+        id="move_file",
+        description="Move a file",
+        args_schema={"src": str, "dest": str},
+        permission_level="medium",
+        timeout=30,
+        handler=files.move_file,
+    )
+)
+
+register_action(
+    Action(
+        id="move_to_trash",
+        description="Move a file to Recycle Bin",
+        args_schema={"path": str},
+        permission_level="high",
+        timeout=30,
+        handler=files.move_to_trash,
+    )
+)
+
+register_action(
+    Action(
+        id="get_system_info",
+        description="Get basic system information",
+        args_schema={"info_type": str},
+        permission_level="low",
+        timeout=10,
+        handler=windows_system.get_disk_space,
     )
 )
