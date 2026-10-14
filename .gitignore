@@ -1,0 +1,23 @@
+# Python virtual environment
+venv/
+
+# Environment variables
+.env
+
+# Build / distribution
+dist/
+build/
+
+# Editor
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Playwright browsers
+.playwright/
+
+# Logs
+*.log
