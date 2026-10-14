@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass, field
 from typing import Callable, Dict, Any, Optional
 import subprocess
 import os
@@ -17,6 +17,7 @@ class Action:
     permission_level: str  # 'low', 'medium', 'high'
     timeout: Optional[int]
     handler: Callable[[Dict[str, Any]], Dict[str, Any]]
+    optional_args_schema: Dict[str, type] = field(default_factory=dict)
 
 
 _registry: Dict[str, Action] = {}
@@ -34,8 +35,11 @@ def execute_action(action_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
     action = get_action(action_id)
     if not action:
         return {"success": False, "action": action_id, "error": "Unknown action"}
+    if not isinstance(args, dict):
+        return {"success": False, "action": action_id, "error": "Arguments must be an object"}
+    args = dict(args)
 
-    # validate args types
+    # validate required args types
     for k, t in action.args_schema.items():
         if k not in args:
             return {"success": False, "action": action_id, "error": f"Missing argument: {k}"}
@@ -46,6 +50,22 @@ def execute_action(action_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
             else:
                 return {"success": False, "action": action_id, "error": f"Invalid type for {k}: expected {t}"}
 
+    # Validate optional arguments and reject misspelled or unsupported keys.
+    unknown_args = set(args) - set(action.args_schema) - set(action.optional_args_schema)
+    if unknown_args:
+        names = ", ".join(sorted(unknown_args))
+        return {"success": False, "action": action_id, "error": f"Unsupported argument(s): {names}"}
+
+    for k, t in action.optional_args_schema.items():
+        if k not in args:
+            continue
+        value = args[k]
+        # JSON clients often represent whole-number timeouts as integers; accept those
+        # for float fields, but never treat bool as a number.
+        if t is float and isinstance(value, (int, float)) and not isinstance(value, bool):
+            args[k] = float(value)
+        elif not isinstance(value, t):
+            return {"success": False, "action": action_id, "error": f"Invalid type for {k}: expected {t}"}
     # permission check - actual confirmation handled by UI layer
     if requires_confirmation(action.permission_level):
         return {
@@ -72,8 +92,9 @@ def execute_action(action_id: str, args: Dict[str, Any]) -> Dict[str, Any]:
 register_action(
     Action(
         id="open_application",
-        description="Open an installed application by name",
+        description="Open an installed application by name; optional window visibility verification is available",
         args_schema={"name": str},
+        optional_args_schema={"verify_window": bool, "verify_timeout": float},
         permission_level="low",
         timeout=10,
         handler=applications.open_application,
