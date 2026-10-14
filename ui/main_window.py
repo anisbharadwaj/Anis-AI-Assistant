@@ -1,9 +1,11 @@
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QLabel
+from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QLabel, QMessageBox
+from core.assistant import default_assistant
+from core import action_registry
 
 class MainWindow(QMainWindow):
-    """Minimal main window with a typed-chat interface.
-    This implements Phase 2: a basic typed chat UI. Speech, AI providers, and actions
-    are stubs and will be added in subsequent phases.
+    """Main window with a typed-chat interface integrated with the assistant.
+    When the assistant requests an action that requires confirmation the UI
+    will prompt the user.
     """
     def __init__(self):
         super().__init__()
@@ -34,6 +36,38 @@ class MainWindow(QMainWindow):
         if not text:
             return
         self.chat_view.append(f"You: {text}")
-        # TODO: hook into core.assistant to get a real response
-        self.chat_view.append(f"ANIS: (stub) I heard: {text}")
+        self.status_label.setText("Status: thinking...")
+        resp = default_assistant.handle_text(text)
+        # If the assistant asks to run an action
+        if resp.action:
+            if resp.requires_confirmation:
+                confirm = QMessageBox.question(self, "Confirm action", f"{resp.text}\n\nProceed?", QMessageBox.Yes | QMessageBox.No)
+                if confirm != QMessageBox.Yes:
+                    self.chat_view.append("ANIS: Action cancelled by user.")
+                    self.status_label.setText("Status: idle")
+                    self.input.clear()
+                    return
+            # attempt to execute action
+            result = action_registry.execute_action(resp.action, resp.action_args or {})
+            if result.get("success"):
+                self.chat_view.append(f"ANIS: Done, sir. {result.get('summary')}")
+            else:
+                if result.get("requires_confirmation"):
+                    # UI-level confirmation if registry indicates so
+                    confirm = QMessageBox.question(self, "Confirm action", f"Action {resp.action} requires confirmation. Proceed?", QMessageBox.Yes | QMessageBox.No)
+                    if confirm == QMessageBox.Yes:
+                        # bypass permission by re-running handler directly (handler call)
+                        action = action_registry.get_action(resp.action)
+                        try:
+                            r = action.handler(resp.action_args or {})
+                            self.chat_view.append(f"ANIS: Done, sir. {r.get('summary')}")
+                        except Exception as e:
+                            self.chat_view.append(f"ANIS: Failed to execute action: {e}")
+                    else:
+                        self.chat_view.append("ANIS: Action cancelled by user.")
+                else:
+                    self.chat_view.append(f"ANIS: Failed to execute action: {result.get('error')}")
+        else:
+            self.chat_view.append(f"ANIS: {resp.text}")
+        self.status_label.setText("Status: idle")
         self.input.clear()
