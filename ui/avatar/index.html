@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Anis AI — 3D Avatar</title>
+  <!-- Three.js from CDN (r150+) -->
+  <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root{--bg:#071024;--panel:#0b1220;--accent:#06b6d4;--muted:#94a3b8}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#021424);font-family:Inter,system-ui,Segoe UI,Helvetica,Arial}
+    #app{height:100%;display:flex;flex-direction:column}
+    header{padding:12px 20px;color:#fff;display:flex;align-items:center;justify-content:space-between}
+    #status{font-size:14px;color:var(--muted)}
+    #main{flex:1;display:flex;gap:20px;padding:20px}
+    #viewport{flex:1;border-radius:12px;background:rgba(255,255,255,0.02);position:relative;overflow:hidden}
+    #hud{width:420px;max-width:38%;background:var(--panel);border-radius:12px;padding:16px;color:#e6eef6}
+    .section{margin-bottom:12px}
+    .transcript{min-height:64px;padding:10px;background:rgba(255,255,255,0.02);border-radius:8px;color:var(--muted)}
+    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#012;cursor:pointer}
+    button.secondary{background:#123243;color:#cfeefb}
+    small{font-size:12px;color:var(--muted)}
+    #controls{display:flex;gap:8px;flex-wrap:wrap}
+    #offline-badge{display:inline-block;background:#7f1d1d;color:#ffdede;padding:6px 8px;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div style="display:flex;align-items:center;gap:12px">
+        <svg width="36"height="36"viewBox="0 0 24 24"fill="none"xmlns="http://www.w3.org/2000/svg"><circle cx="12"cy="12"r="10"fill="#052733"/><path d="M7 15c1.5-2 4-3 7-3"stroke="#06b6d4"stroke-width="1.6"stroke-linecap="round"stroke-linejoin="round"/></svg>
+        <div>
+          <div style="font-weight:700">ANIS AI</div>
+          <small id="status">Initializing avatar…</small>
+        </div>
+      </div>
+      <div>
+        <small id="mode">Offline</small>
+      </div>
+    </header>
+
+    <div id="main">
+      <div id="viewport"></div>
+
+      <aside id="hud">
+        <div class="section">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <strong>Live Transcript</strong>
+            <small id="engine">idle</small>
+          </div>
+          <div id="transcript" class="transcript">Say: "Anis, open YouTube" or use the microphone button.</div>
+        </div>
+
+        <div class="section">
+          <strong>Controls</strong>
+          <div id="controls" style="margin-top:8px">
+            <button id="mic">Start mic</button>
+            <button id="stop" class="secondary">Stop</button>
+            <button id="speak" class="secondary">Say Hello</button>
+          </div>
+          <div style="margin-top:8px"><small>Speech and WebSocket are used to make Anis speak and follow instructions.</small></div>
+        </div>
+
+        <div class="section">
+          <strong>Connection</strong>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><div id="conn" style="width:10px;height:10px;border-radius:50%;background:#7c7c7c"></div><small id="conn-text">disconnected</small></div>
+          <div style="margin-top:8px"><small id="fallback-note">If backend is not running, the avatar will still speak locally and attempt to execute simple actions in-browser.</small></div>
+        </div>
+
+        <div class="section">
+          <strong>Developer</strong>
+          <div style="margin-top:6px"><small>This UI uses Three.js, Web Speech API and WebSocket. Works best in Chromium-based browsers.</small></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="./avatar.js" type="module"></script>
+</body>
+</html>
