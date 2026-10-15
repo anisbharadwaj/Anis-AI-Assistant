@@ -1,81 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Anis AI — 3D Avatar</title>
-  <!-- Three.js from CDN (r150+) -->
-  <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
-  <style>
-    :root{--bg:#071024;--panel:#0b1220;--accent:#06b6d4;--muted:#94a3b8}
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#021424);font-family:Inter,system-ui,Segoe UI,Helvetica,Arial}
-    #app{height:100%;display:flex;flex-direction:column}
-    header{padding:12px 20px;color:#fff;display:flex;align-items:center;justify-content:space-between}
-    #status{font-size:14px;color:var(--muted)}
-    #main{flex:1;display:flex;gap:20px;padding:20px}
-    #viewport{flex:1;border-radius:12px;background:rgba(255,255,255,0.02);position:relative;overflow:hidden}
-    #hud{width:420px;max-width:38%;background:var(--panel);border-radius:12px;padding:16px;color:#e6eef6}
-    .section{margin-bottom:12px}
-    .transcript{min-height:64px;padding:10px;background:rgba(255,255,255,0.02);border-radius:8px;color:var(--muted)}
-    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#012;cursor:pointer}
-    button.secondary{background:#123243;color:#cfeefb}
-    small{font-size:12px;color:var(--muted)}
-    #controls{display:flex;gap:8px;flex-wrap:wrap}
-    #offline-badge{display:inline-block;background:#7f1d1d;color:#ffdede;padding:6px 8px;border-radius:8px}
-  </style>
-</head>
-<body>
-  <div id="app">
-    <header>
-      <div style="display:flex;align-items:center;gap:12px">
-        <svg width="36"height="36"viewBox="0 0 24 24"fill="none"xmlns="http://www.w3.org/2000/svg"><circle cx="12"cy="12"r="10"fill="#052733"/><path d="M7 15c1.5-2 4-3 7-3"stroke="#06b6d4"stroke-width="1.6"stroke-linecap="round"stroke-linejoin="round"/></svg>
-        <div>
-          <div style="font-weight:700">ANIS AI</div>
-          <small id="status">Initializing avatar…</small>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anis AI - Cinematic Companion</title>
+    <script src="https://unpkg.com/three@0.150.1/build/three.min.js"></script>
+    <style>
+      :root {
+        --bg: #040b16;
+        --panel: rgba(12, 23, 38, 0.82);
+        --panel-border: rgba(34, 211, 238, 0.32);
+        --cyan: #75e6ff;
+        --cyan-deep: #0891b2;
+        --muted: #9ab7c4;
+        --text: #eaf9ff;
+        --amber: #fbbf24;
+        --red: #f87171;
+        --green: #34d399;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background:
+          radial-gradient(circle at 50% 12%, rgba(103, 232, 249, 0.16), transparent 18%),
+          radial-gradient(circle at 50% 80%, rgba(16, 46, 72, 0.75), transparent 38%),
+          linear-gradient(180deg, #040b16, #020712 52%, #01070d);
+        color: var(--text);
+        font-family: Inter, "Segoe UI", sans-serif;
+      }
+
+      body { overflow: hidden; }
+
+      .shell { height: 100%; display: flex; flex-direction: column; }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 22px;
+        background: rgba(6, 14, 22, 0.72);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+        backdrop-filter: blur(10px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 12px rgba(52, 211, 153, 0.9);
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 1.05rem;
+        letter-spacing: 0.22em;
+        font-weight: 700;
+        color: var(--cyan);
+      }
+
+      .live-state {
+        color: var(--muted);
+        letter-spacing: 0.12em;
+        font-size: 0.74rem;
+        text-transform: uppercase;
+      }
+
+      .workspace {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+      }
+
+      .viewport {
+        flex: 1;
+        position: relative;
+        border-right: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .viewport::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, rgba(103, 232, 249, 0.12), transparent 48%);
+        pointer-events: none;
+      }
+
+      .sidebar {
+        width: 360px;
+        padding: 18px 18px 14px;
+        background: rgba(8, 17, 24, 0.72);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        box-shadow: 0 18px 28px rgba(2, 8, 19, 0.32);
+        padding: 14px 14px 12px;
+      }
+
+      .card h3 {
+        margin: 0 0 10px;
+        color: var(--cyan);
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .transcript {
+        min-height: 72px;
+        color: var(--text);
+        line-height: 1.55;
+        white-space: pre-wrap;
+        font-size: 0.96rem;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      button {
+        border: 1px solid rgba(103, 232, 249, 0.35);
+        background: linear-gradient(180deg, rgba(83, 196, 233, 0.18), rgba(6, 182, 212, 0.12));
+        color: var(--text);
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.12s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 12px rgba(103, 232, 249, 0.28);
+      }
+
+      button.secondary {
+        background: rgba(148, 163, 184, 0.08);
+        border-color: rgba(148, 163, 184, 0.2);
+      }
+
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .connection-pill {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--red);
+        box-shadow: 0 0 10px rgba(248, 113, 113, 0.7);
+      }
+
+      .tiny {
+        color: var(--muted);
+        font-size: 0.75rem;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 900px) {
+        .workspace {
+          flex-direction: column;
+        }
+
+        .viewport {
+          min-height: 55vh;
+          border-right: none;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .sidebar {
+          width: 100%;
+          min-height: 0;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="dot" id="status-dot"></span>
+          <h1>ANIS AI</h1>
         </div>
-      </div>
-      <div>
-        <small id="mode">Offline</small>
-      </div>
-    </header>
+        <div class="live-state" id="live-state">Idle</div>
+      </header>
 
-    <div id="main">
-      <div id="viewport"></div>
+      <main class="workspace">
+        <section class="viewport" id="viewport"></section>
 
-      <aside id="hud">
-        <div class="section">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <strong>Live Transcript</strong>
-            <small id="engine">idle</small>
+        <aside class="sidebar">
+          <div class="card">
+            <h3>Live Transcript</h3>
+            <div class="transcript" id="transcript">Say: “Anis, open YouTube” or tap the mic.</div>
           </div>
-          <div id="transcript" class="transcript">Say: "Anis, open YouTube" or use the microphone button.</div>
-        </div>
 
-        <div class="section">
-          <strong>Controls</strong>
-          <div id="controls" style="margin-top:8px">
-            <button id="mic">Start mic</button>
-            <button id="stop" class="secondary">Stop</button>
-            <button id="speak" class="secondary">Say Hello</button>
+          <div class="card">
+            <h3>Controls</h3>
+            <div class="controls">
+              <button id="mic-btn">Start Mic</button>
+              <button id="speak-btn" class="secondary">Say Hello</button>
+              <button id="stop-btn" class="secondary">Stop</button>
+            </div>
           </div>
-          <div style="margin-top:8px"><small>Speech and WebSocket are used to make Anis speak and follow instructions.</small></div>
-        </div>
 
-        <div class="section">
-          <strong>Connection</strong>
-          <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><div id="conn" style="width:10px;height:10px;border-radius:50%;background:#7c7c7c"></div><small id="conn-text">disconnected</small></div>
-          <div style="margin-top:8px"><small id="fallback-note">If backend is not running, the avatar will still speak locally and attempt to execute simple actions in-browser.</small></div>
-        </div>
-
-        <div class="section">
-          <strong>Developer</strong>
-          <div style="margin-top:6px"><small>This UI uses Three.js, Web Speech API and WebSocket. Works best in Chromium-based browsers.</small></div>
-        </div>
-      </aside>
+          <div class="card">
+            <h3>Connection</h3>
+            <div class="status-row">
+              <span class="connection-pill" id="connection-pill"></span>
+              <span id="connection-text">Offline</span>
+            </div>
+            <div class="tiny" style="margin-top: 8px;">
+              The assistant will respond with local voice synthesis when the backend is unavailable.
+            </div>
+          </div>
+        </aside>
+      </main>
     </div>
-  </div>
 
-  <script src="./avatar.js" type="module"></script>
-</body>
+    <script src="./avatar.js"></script>
+  </body>
 </html>
