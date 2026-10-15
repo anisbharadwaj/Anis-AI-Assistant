@@ -5,7 +5,7 @@ const connectionPill = document.getElementById('connection-pill');
 const connectionText = document.getElementById('connection-text');
 const statusDot = document.getElementById('status-dot');
 
-let scene, camera, renderer, avatarGroup, mouthMesh, haloMesh, dotParticles;
+let scene, camera, renderer, avatarGroup, mouthMesh, haloMesh, faceShadow, dotParticles;
 let animationState = 'idle';
 let socket = null;
 let recognition = null;
@@ -28,13 +28,13 @@ function setConnection(connected) {
   }
 }
 
-function updateTranscript(text) {
-  transcriptEl.textContent = text;
-}
-
 function setLiveState(state) {
   animationState = state;
   liveStateEl.textContent = state.toUpperCase();
+}
+
+function updateTranscript(text) {
+  transcriptEl.textContent = text;
 }
 
 function initThree() {
@@ -43,76 +43,123 @@ function initThree() {
   scene.fog = new THREE.Fog(0x020812, 6, 18);
 
   camera = new THREE.PerspectiveCamera(40, viewport.clientWidth / viewport.clientHeight, 0.1, 100);
-  camera.position.set(0, 1.2, 5.6);
+  camera.position.set(0, 1.2, 5.8);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(viewport.clientWidth, viewport.clientHeight);
   viewport.appendChild(renderer.domElement);
 
-  const ambientLight = new THREE.AmbientLight(0x7dd3fc, 1.1);
+  const ambientLight = new THREE.AmbientLight(0x9cc9ff, 1.15);
   scene.add(ambientLight);
 
-  const keyLight = new THREE.PointLight(0x67e8f9, 2.2, 25, 2);
-  keyLight.position.set(2.5, 3.2, 4.5);
+  const keyLight = new THREE.DirectionalLight(0xfff3e7, 1.8);
+  keyLight.position.set(2.4, 4.5, 4.3);
   scene.add(keyLight);
 
-  const rimLight = new THREE.PointLight(0x1d4ed8, 1.6, 25, 2);
-  rimLight.position.set(-3.5, 1.5, -2.8);
+  const rimLight = new THREE.PointLight(0x5fd8ff, 1.6, 30, 2);
+  rimLight.position.set(-3.2, 2.2, -2.5);
   scene.add(rimLight);
+
+  const fillLight = new THREE.PointLight(0x1d4ed8, 0.8, 30, 2);
+  fillLight.position.set(0, 1.5, -4.0);
+  scene.add(fillLight);
 
   avatarGroup = new THREE.Group();
   scene.add(avatarGroup);
 
+  const skinMat = new THREE.MeshPhysicalMaterial({
+    color: 0xd9b59a,
+    emissive: 0x4a2e23,
+    emissiveIntensity: 0.15,
+    metalness: 0.08,
+    roughness: 0.72,
+    transparent: true,
+    opacity: 0.98
+  });
+
+  const cheekMat = new THREE.MeshStandardMaterial({
+    color: 0xe8c5a6,
+    roughness: 0.8,
+    metalness: 0.03
+  });
+
+  const eyeMat = new THREE.MeshPhysicalMaterial({
+    color: 0x111827,
+    roughness: 0.25,
+    metalness: 0.45
+  });
+
   const bodyMat = new THREE.MeshPhysicalMaterial({
-    color: 0x5eead4,
-    emissive: 0x0f766e,
-    emissiveIntensity: 0.55,
-    metalness: 0.65,
-    roughness: 0.18,
+    color: 0x6ec7ff,
+    emissive: 0x0d5f77,
+    emissiveIntensity: 0.35,
+    metalness: 0.62,
+    roughness: 0.22,
     transparent: true,
-    opacity: 0.95,
+    opacity: 0.96
   });
 
-  const headMat = new THREE.MeshPhysicalMaterial({
-    color: 0x7dd3fc,
-    emissive: 0x164e63,
-    emissiveIntensity: 0.55,
-    metalness: 0.4,
-    roughness: 0.3,
-    transparent: true,
-    opacity: 0.96,
-  });
-
-  const faceMat = new THREE.MeshBasicMaterial({ color: 0xcaf6ff, transparent: true, opacity: 0.9 });
-
-  const body = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 32), bodyMat);
-  body.scale.set(1.15, 1.35, 0.92);
-  body.position.y = 0.1;
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.0, 48, 48), bodyMat);
+  body.scale.set(1.16, 1.42, 0.9);
+  body.position.y = 0.18;
   avatarGroup.add(body);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.72, 32, 32), headMat);
-  head.position.set(0, 1.75, 0.2);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.72, 48, 48), skinMat);
+  head.scale.set(1.02, 1.12, 0.96);
+  head.position.set(0, 1.76, 0.1);
   avatarGroup.add(head);
 
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.52, 32, 32), faceMat);
-  face.scale.set(0.82, 0.94, 0.78);
-  face.position.set(0, 1.72, 0.75);
-  avatarGroup.add(face);
+  const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.48, 48, 32), cheekMat);
+  jaw.scale.set(1.0, 0.72, 0.82);
+  jaw.position.set(0, 1.28, 0.3);
+  avatarGroup.add(jaw);
 
-  const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 16), new THREE.MeshBasicMaterial({ color: 0x082f49 }));
-  eyeLeft.position.set(-0.17, 1.8, 1.15);
+  const cheekLeft = new THREE.Mesh(new THREE.SphereGeometry(0.12, 20, 20), cheekMat);
+  cheekLeft.position.set(-0.28, 1.52, 0.72);
+  avatarGroup.add(cheekLeft);
+
+  const cheekRight = cheekLeft.clone();
+  cheekRight.position.x = 0.28;
+  avatarGroup.add(cheekRight);
+
+  const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.065, 20, 20), eyeMat);
+  eyeLeft.position.set(-0.17, 1.8, 0.95);
   avatarGroup.add(eyeLeft);
 
   const eyeRight = eyeLeft.clone();
   eyeRight.position.x = 0.17;
   avatarGroup.add(eyeRight);
 
-  mouthMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(0.32, 0.08, 0.08),
-    new THREE.MeshBasicMaterial({ color: 0xfef3c7 })
+  const eyeGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.028, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xf0f9ff })
   );
-  mouthMesh.position.set(0, 1.38, 1.12);
+  eyeGlow.position.set(-0.17, 1.82, 1.02);
+  avatarGroup.add(eyeGlow);
+
+  const eyeGlow2 = eyeGlow.clone();
+  eyeGlow2.position.x = 0.17;
+  avatarGroup.add(eyeGlow2);
+
+  const nose = new THREE.Mesh(
+    new THREE.ConeGeometry(0.08, 0.28, 18),
+    new THREE.MeshStandardMaterial({ color: 0xd7b08c, roughness: 0.8, metalness: 0.02 })
+  );
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 1.58, 1.08);
+  avatarGroup.add(nose);
+
+  mouthMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({
+      color: 0xb45309,
+      roughness: 0.85,
+      metalness: 0.08
+    })
+  );
+  mouthMesh.scale.set(1.35, 0.72, 0.8);
+  mouthMesh.position.set(0, 1.34, 1.08);
   avatarGroup.add(mouthMesh);
 
   const torsoGlow = new THREE.Mesh(
@@ -120,27 +167,42 @@ function initThree() {
     new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.7 })
   );
   torsoGlow.rotation.x = Math.PI / 2;
-  torsoGlow.position.y = -0.9;
+  torsoGlow.position.y = -0.82;
   avatarGroup.add(torsoGlow);
 
   haloMesh = new THREE.Mesh(
-    new THREE.TorusGeometry(2.15, 0.04, 12, 80),
+    new THREE.TorusGeometry(2.2, 0.04, 12, 90),
     new THREE.MeshBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.8 })
   );
   haloMesh.rotation.x = Math.PI / 2;
-  haloMesh.position.y = 2.5;
+  haloMesh.position.y = 2.4;
   avatarGroup.add(haloMesh);
+
+  const shadowGeo = new THREE.CircleGeometry(1.55, 48);
+  const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 });
+  faceShadow = new THREE.Mesh(shadowGeo, shadowMat);
+  faceShadow.rotation.x = -Math.PI / 2;
+  faceShadow.position.y = -1.7;
+  scene.add(faceShadow);
 
   const particleGeometry = new THREE.BufferGeometry();
   const count = 180;
   const positions = new Float32Array(count * 3);
+
   for (let i = 0; i < count * 3; i += 3) {
     positions[i] = (Math.random() - 0.5) * 8;
     positions[i + 1] = (Math.random() - 0.5) * 6;
     positions[i + 2] = (Math.random() - 0.5) * 8;
   }
+
   particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const particleMat = new THREE.PointsMaterial({ color: 0x67e8f9, size: 0.045, transparent: true, opacity: 0.8 });
+  const particleMat = new THREE.PointsMaterial({
+    color: 0x67e8f9,
+    size: 0.045,
+    transparent: true,
+    opacity: 0.8
+  });
+
   dotParticles = new THREE.Points(particleGeometry, particleMat);
   scene.add(dotParticles);
 
@@ -150,33 +212,40 @@ function initThree() {
 
 function animateFrame() {
   requestAnimationFrame(animateFrame);
+
   const t = performance.now() * 0.001;
 
   if (avatarGroup) {
-    avatarGroup.rotation.y = t * 0.28;
-    avatarGroup.position.y = Math.sin(t * 1.4) * 0.18;
+    avatarGroup.rotation.y = t * 0.24;
+    avatarGroup.position.y = Math.sin(t * 1.25) * 0.18;
 
     if (animationState === 'speaking') {
-      mouthMesh.scale.y = 1 + Math.abs(Math.sin(t * 18)) * 1.8;
+      mouthMesh.scale.y = 0.9 + Math.abs(Math.sin(t * 18)) * 1.8;
+      mouthMesh.scale.x = 1.1 + Math.abs(Math.sin(t * 12)) * 0.3;
       avatarGroup.scale.setScalar(1.05 + Math.sin(t * 12) * 0.04);
       haloMesh.material.opacity = 0.9;
     } else if (animationState === 'listening') {
-      mouthMesh.scale.y = 0.8 + Math.abs(Math.sin(t * 8)) * 0.5;
-      avatarGroup.scale.setScalar(1.02 + Math.sin(t * 6) * 0.02);
-      haloMesh.material.opacity = 0.7;
-    } else {
-      mouthMesh.scale.y = 0.5;
-      avatarGroup.scale.setScalar(1);
+      mouthMesh.scale.y = 0.8 + Math.abs(Math.sin(t * 9)) * 0.4;
+      avatarGroup.scale.setScalar(1.02 + Math.sin(t * 7) * 0.02);
       haloMesh.material.opacity = 0.75;
-    }
-
-    if (dotParticles) {
-      dotParticles.rotation.y += 0.0015;
-      dotParticles.rotation.x = Math.sin(t * 0.7) * 0.2;
+    } else {
+      mouthMesh.scale.y = 0.6;
+      mouthMesh.scale.x = 1.1;
+      avatarGroup.scale.setScalar(1.0);
+      haloMesh.material.opacity = 0.7;
     }
   }
 
-  if (renderer && scene && camera) renderer.render(scene, camera);
+  if (dotParticles) {
+    dotParticles.rotation.y += 0.0015;
+    dotParticles.rotation.x = Math.sin(t * 0.7) * 0.2;
+  }
+
+  if (faceShadow) {
+    faceShadow.material.opacity = 0.28 + Math.sin(t * 1.6) * 0.05;
+  }
+
+  renderer.render(scene, camera);
 }
 
 function onResize() {
@@ -287,7 +356,7 @@ function speak(text) {
   if ('speechSynthesis' in window) {
     const utterance = new SpeechSynthesisUtterance(value);
     utterance.rate = 1.02;
-    utterance.pitch = 1.2;
+    utterance.pitch = 1.15;
     utterance.lang = 'en-US';
     utterance.onend = () => setLiveState('idle');
     utterance.onerror = () => setLiveState('idle');
@@ -301,7 +370,7 @@ function speak(text) {
 function startListening() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    updateTranscript('This browser does not support voice recognition. Use a Chromium-based browser like Chrome or Edge.');
+    updateTranscript('This browser does not support voice recognition. Use Chrome or Edge.');
     return;
   }
 
@@ -334,8 +403,10 @@ function startListening() {
   try {
     recognition.start();
   } catch (error) {
-    recognition.stop();
-    setTimeout(() => recognition.start(), 150);
+    if (recognition) {
+      recognition.stop();
+      setTimeout(() => recognition.start(), 150);
+    }
   }
 }
 
