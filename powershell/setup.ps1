@@ -15,6 +15,14 @@ Write-Host "Installing Python packages (this may take a few minutes)..."
 Write-Host "Installing Playwright browsers..."
 .\.venv\Scripts\python.exe -m playwright install
 
+Write-Host "Checking microphone and speech packages..."
+try {
+    .\.venv\Scripts\python.exe -c "import speech_recognition, pyttsx3, pyaudio"
+    Write-Host "Voice dependencies are ready."
+} catch {
+    Write-Warning "PyAudio could not be imported. Install Microsoft C++ Build Tools, then rerun this script."
+}
+
 Write-Host "Setup complete. To run the app:"
 Write-Host "> .\\.venv\\Scripts\\Activate.ps1"
 Write-Host "> python app.py"
