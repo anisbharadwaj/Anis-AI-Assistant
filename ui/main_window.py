@@ -46,7 +46,7 @@ class FunctionThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("ANIS AI")
+        self.setWindowTitle("NEXUS / SYSTEM")
         self.resize(1100, 720)
 
         # Load DB and preferences
@@ -75,7 +75,7 @@ class MainWindow(QMainWindow):
         left_layout = QVBoxLayout(left_frame)
 
         header = QHBoxLayout()
-        title = QLabel("ANIS AI")
+        title = QLabel("NEXUS / SYSTEM")
         title.setObjectName("title")
         header.addWidget(title)
         header.addStretch()
